@@ -1,0 +1,13 @@
+{
+  "authorEmail": "admin@corpx.com",
+  "authorName": "The Administrator",
+  "copyright": "Some rights reserved.",
+  "name": "CorpX Docs",
+  "slogen": "CorpX internal documentation",
+  "social": {
+    "twitter": "",
+    "github": "",
+    "discord": ""
+  },
+  "url": ""
+}

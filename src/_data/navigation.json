@@ -1,0 +1,56 @@
+{
+  "header": [
+    {
+      "caption": "Changelog",
+      "url": "/changelog/",
+      "external": false
+    }
+  ],
+  "footer": [
+    {
+      "title": "Getting Started",
+      "items": [
+        {
+          "caption": "Introduction",
+          "url": "/getting-started/introduction/",
+          "external": false
+        },
+        {
+          "caption": "Features",
+          "url": "/getting-started/features/",
+          "external": false
+        },
+        {
+          "caption": "Structure",
+          "url": "/getting-started/structure/",
+          "external": false
+        },
+        {
+          "caption": "Setup",
+          "url": "/getting-started/setup/",
+          "external": false
+        }
+      ]
+    },
+    {
+      "title": "GitHub Actions",
+      "items": [
+        {
+          "caption": "Docs",
+          "url": "https://docs.github.com/en/actions",
+          "external": true
+        }
+      ]
+    },
+    {
+      "title": "More Udacity Courses",
+      "items": [
+        {
+          "caption": "Courses",
+          "url": "https://www.udacity.com/",
+          "external": true
+        }
+      ]
+    }
+  ]
+}
