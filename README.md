@@ -79,7 +79,7 @@ Create a new GitHub Actions workflow called `deploy.yaml`. This workflow should 
     1. `test`
     2. `build`
     3. `deploy`
-6. Your workflow should run fast, it should not take more than `<TODO: define how fast in seconds>` (on average) to run all the jobs
+6. Your workflow should run fast, it should not take more than `2 minutes (120 seconds)` (on average) to run all the jobs
 7. You must adopt the security best practices discussed in the course and [outlined in the docs](https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions)
 
 ### `test` job
@@ -88,9 +88,10 @@ For this job, you are required to:
 
 1. Checkout the repository
 2. Setup Node (version 18+)
-3. Run all the linters
-4. Run all the scripts in the folder `script/**`
-5. You should define and use a repository variable named `URL_CHECKER_TIMEOUT` to configure the `timeout` value for the `script/url-checker.js` script
+3. Install all the dependencies needed. Use the cache to speed up the process
+4. Run all the linters
+5. Run all the scripts in the folder `script/**`
+6. You should define and use a repository variable named `URL_CHECKER_TIMEOUT` to configure the `timeout` value for the `script/url-checker.js` script
     1. Use any reasonable value (in seconds)
 
 The job should fail if any of its steps fail.
@@ -99,13 +100,16 @@ The job should fail if any of its steps fail.
 
 For this job, you are required to:
 
-1. Make sure that the `test` ran and succeeded
+1. Make sure that the `test` job ran and succeeded
 2. Checkout the repository
 3. Setup pages using `actions/configure-pages@v4`
-4. Build the static pages
+4. Setup Node (version 18+) 
+5. Install all the dependencies needed. Use the cache to speed up the process
+6. Build the static pages
     1. In order for 11ty to build your site successfully, it requires an environment variable `PATH_PREFIX` to be set and to have the value of the name of your repository
     2. The `PATH_PREFIX` should be of the following format: `/repository name/`. Make sure that the repository name does not include the repository owner! Do not forget the `/` at the start and end
-5. Upload all the content of the built `_site` as an artifact
+7. Build your site by running: `npm run prod`
+8. Upload all the content of the built `_site` as an artifact
 
 The job should fail if any of its steps fail.
 
@@ -113,9 +117,9 @@ The job should fail if any of its steps fail.
 
 For this job, you are required to:
 
-1. Never deploy changes if any of the previous jobs fail
-2. Deploy to GitHub pages your site
-3. Using the GitHub CLI, authenticate to GitHub with `GITHUB_TOKEN` and create an issue that reports the status of the deployment, with:
+1. Never deploy changes if any of the previous jobs (`test`, `build`) fail
+2. Deploy your site to GitHub pages
+3. Using the GitHub CLI, authenticate to GitHub with `GITHUB_TOKEN` and create an issue that reports the status of the deployment. The issue should have:
     1. Title: `<date> - Deployment: <status>`
         1. Make sure to replace `<date>` with today's date
         2. Make sure to replace `<status>` with the outcome of the deployment (succeeded or failed)
@@ -169,3 +173,40 @@ spruecss-eleventy-documentation-template/
 - **scss**: The Sass files.
 - **shortcodes**: The available shortcodes.
 - **transforms**: The transformations.
+
+### Important tips to run the project
+
+1. To run all the linters in the project, you can use the following command:
+
+    ```bash
+    $ npm run lint:all
+
+    ...
+    ```
+
+1. To run the URL checker script, you can use the following command:
+
+    ```bash
+    $ node url-checker.js -t <timeout> -p <path>
+
+        Options:
+        -t, --timeout <timeout>  The timeout in seconds for each request. Default is 5000.
+        -d, --directory <directory path> The path to the posts directory. Default is src/posts.
+    ```
+
+1. In order to fetch the repository name from a variable with the format: `owner/repository`, one way would be to use `cut`:
+
+    ```bash
+    $ echo "owner/repository" | cut -d'/' -f2-
+
+    repository
+    ```
+
+1. To build the site so that it's compatible with GitHub Pages, you can use the following commands:
+
+    ```bash
+    $ PATH_PREFIX="<name of your repository>"
+    $ npm run prod
+
+    ...
+    ```
