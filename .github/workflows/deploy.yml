@@ -45,6 +45,7 @@ jobs:
       - name: Run all scripts from folder scripts/
         run: npm run .scripts/**.js
   build:
+    needs: test
     runs-on: ubuntu-latest
     env:
       URL_CHECKER_TIMEOUT: 120
@@ -76,26 +77,21 @@ jobs:
         with:
           path: '_site/'
   deploy:
+    needs: [test, build]
     runs-on: ubuntu-latest
     permissions:
       contents: read
       issues: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: "."
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
       - run: |
+          DATE=$(date +'%Y-%m-%d')
           gh issue --repo ${{ github.repository }} \
-            create --title "{{date}} - Deployment: {{status}}" --body "Issue body"
+            create --title "$DATE - Deployment: $DEPLOY_STATUS" --body "URL: $PAGE_URL"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
