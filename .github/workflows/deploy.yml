@@ -1,15 +1,12 @@
 name: Deploy Test
-
-run-name: Run of the complex workflow
-
 on:
   push:
     branches: ["main"]
-  paths-ignore:
-      - ".gitignore"
-      - "README.md"
-      - "CONTRIBUTING.md"
-      - "LICENSE.txt"
+    paths-ignore:
+        - ".gitignore"
+        - "README.md"
+        - "CONTRIBUTING.md"
+        - "LICENSE.txt"
   pull_request:
     branches: ["main"]
    workflow_dispatch:
@@ -19,10 +16,10 @@ on:
         required: true
         type: boolean
         default: false
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
-
 jobs:
   test:
    runs-on: ubuntu-latest
