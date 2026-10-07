@@ -1,0 +1,104 @@
+name: Deploy Test
+
+run-name: Run of the complex workflow
+
+on:
+  # Workflow run trigger events
+  push:
+    branches: ["main"]
+  paths-ignore:
+      - ".gitignore"
+      - "README.md"
+      - "CONTRIBUTING.md"
+      - "LICENSE.txt"
+  pull_request:
+    branches: ["main"]
+   workflow_dispatch:
+    inputs:
+      force_deploy:
+        description: 'FORCE DEPLOY: Bypass safety checks?'
+        required: true
+        type: boolean
+        default: false
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+   runs-on: ubuntu-latest
+   env:
+    URL_CHECKER_TIMEOUT: 120
+  steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 18
+    - uses: actions/cache@v4
+      with:
+        path: ~/.cache
+        key: ${{ runner.os }}-dependencies-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-dependencies-
+
+    - name: Install dependencies
+      run: npm ci
+    - name: Run all linters
+      run: lint:all
+    - name: Run all scripts from folder scripts/
+      run: npm run .scripts/**.js
+  build:
+    runs-on: ubuntu-latest
+    env:
+      URL_CHECKER_TIMEOUT: 120
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+      PATH_PREFIX: '/cd13461-github-actions-project-starter/'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache
+          key: ${{ runner.os }}-dependencies-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-dependencies-
+      - name: Install dependencies
+        run: npm ci
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: "."
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+      - name: Build Prod environment
+        run: eleventy:prod 
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: "."
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+      - run: |
+          gh issue --repo ${{ github.repository }} \
+            create --title "{{date}} - Deployment: {{status}}" --body "Issue body"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
