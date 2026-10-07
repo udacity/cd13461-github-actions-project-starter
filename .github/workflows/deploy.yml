@@ -9,7 +9,7 @@ on:
         - "LICENSE.txt"
   pull_request:
     branches: ["main"]
-   workflow_dispatch:
+  workflow_dispatch:
     inputs:
       force_deploy:
         description: 'FORCE DEPLOY: Bypass safety checks?'
