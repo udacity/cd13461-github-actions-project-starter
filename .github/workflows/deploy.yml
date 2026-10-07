@@ -3,7 +3,6 @@ name: Deploy Test
 run-name: Run of the complex workflow
 
 on:
-  # Workflow run trigger events
   push:
     branches: ["main"]
   paths-ignore:
