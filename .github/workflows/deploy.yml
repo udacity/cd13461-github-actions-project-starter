@@ -1,0 +1,145 @@
+name: Deploy CorpX knowledge base
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '.gitignore'
+      - 'README.md'
+      - 'CONTRIBUTING.md'
+      - 'LICENSE'
+      - 'LICENSE.txt'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: corpx-knowledge-base-workflow
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      URL_CHECKER_TIMEOUT: ${{ vars.URL_CHECKER_TIMEOUT }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18.20.8'
+
+      - name: Cache installed dependencies
+        id: dependencies
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: corpx-deps-v1-${{ runner.os }}-${{ runner.arch }}-node18.20.8-${{ hashFiles('package-lock.json') }}
+
+      - name: Install dependencies and prepare Pagefind
+        if: steps.dependencies.outputs.cache-hit != 'true'
+        run: |
+          npm ci --include=dev --ignore-scripts --no-audit --no-fund
+          sed -i 's|CloudCannon/pagefind|Pagefind/pagefind|g' node_modules/pagefind/lib/*.js
+          npm rebuild --foreground-scripts
+
+      - name: Run all linters
+        run: npm run lint:all
+
+      - name: Check links in documentation
+        run: |
+          : "${URL_CHECKER_TIMEOUT:?Set the URL_CHECKER_TIMEOUT repository variable}"
+          node script/url-checker.js -t "$URL_CHECKER_TIMEOUT"
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: read
+    outputs:
+      site_url: ${{ steps.pages.outputs.base_url }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Configure GitHub Pages
+        id: pages
+        uses: actions/configure-pages@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18.20.8'
+
+      - name: Restore tested dependencies
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: corpx-deps-v1-${{ runner.os }}-${{ runner.arch }}-node18.20.8-${{ hashFiles('package-lock.json') }}
+          fail-on-cache-miss: true
+
+      - name: Build production site
+        env:
+          PATH_PREFIX: /${{ github.event.repository.name }}/
+        run: |
+          npm run sass:prod
+          npm run eleventy:prod
+          test -s _site/index.html
+
+      - name: Upload built site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+      issues: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Download built site
+        uses: actions/download-artifact@v4
+        with:
+          name: github-pages
+          path: downloaded-site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Create deployment status issue
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          DEPLOY_OUTCOME: ${{ steps.deployment.outcome }}
+          SITE_URL: ${{ steps.deployment.outputs.page_url || needs.build.outputs.site_url }}
+        run: |
+          status=failed
+          if [ "$DEPLOY_OUTCOME" = "success" ]; then
+            status=succeeded
+          fi
+          gh issue create \
+            --repo "$REPOSITORY" \
+            --title "$(date -u +%F) - Deployment: $status" \
+            --body "URL: $SITE_URL"
