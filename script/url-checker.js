@@ -91,7 +91,7 @@ const getUrls = (filePaths) => {
 // Call each URL and if the status code is 404, print an error and exit with non 0
 const checkUrl = async (url) => {
     try {
-        const response = await axios.get(url, { timeoutSeconds });
+        const response = await axios.get(url, { timeout: timeoutSeconds });
         console.log(`${response.status} - ${url}`);
     }
     catch (error) {
